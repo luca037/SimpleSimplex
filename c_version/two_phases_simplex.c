@@ -7,32 +7,59 @@ typedef struct {
     Fraction *data; // (m+1) x (n+1) matrix.
 } Tableau;
 
+// FIXME: implement minipivot.
+void pivot_operations(Tableau *tab, size_t h, size_t t) {
+    int cols = tab->n + 1;
+    Fraction save = tab->data[t * cols + h];
+
+    for (size_t j = 0; j <= tab->n; j++) {
+        tab->data[t * cols + j] = fraction_divide(tab->data[t * cols + j], save);
+    }
+
+    for (size_t i = 0; i <= tab->m; i++) {
+        if (i != t) {
+            save = tab->data[i * cols + h];
+            for (size_t j = 0; j <= tab->n; j++) {
+                Fraction tmp = fraction_multiply(save, tab->data[t * cols + j]);
+                tab->data[i * cols + j] = fraction_subtract(tab->data[i * cols + j], tmp);
+            }
+        }
+    }
+}
+
 void pretty_print_tableau(Tableau *tab) {
-    Fraction *elem = NULL; // Pointer to an element of the tablau.
     size_t cols = tab->n + 1;
 
     for (int i = 0; i <= tab->m; i++) {
         printf("[ ");
+
         for (int j = 0; j <= tab->n; j++) {
-            // Print a space before the element if it's not the first one in the row.
-            if (j > 0) {
-                printf(" ");
+            Fraction *elem = &tab->data[i * cols + j];
+
+            // Buffer that holds the string representation of 'elem'.
+            char cell_str[50]; // 50 is a safe size for int/int strings
+
+            if (elem->den == 1) {
+                snprintf(cell_str, sizeof(cell_str), "%d", elem->num);
+            } else {
+                snprintf(cell_str, sizeof(cell_str), "%d/%d", elem->num, elem->den);
             }
-            // Print the element formatted to occupy 6 characters, right-aligned.
-            elem = &tab->data[i * cols + j]; // Get the current element.
-            printf("%6d/%d", elem->num, elem->den);
+
+            // Print the formatted string with a fixed width, right-aligned.
+            printf("%6s ", cell_str);
+
         }
-        printf(" ]\n"); // Closing bracket and newline
+        printf("]\n");
     }
 }
 
+// FIXME: implement the bland's rule.
 // Return 1 if the problem is unbounded, 0 otherwise.
 // If the problem is not unbounded, then 't' contains the pivot row index.
 char unbounded_check(Tableau *tab, size_t h, size_t *t) {
     char unbounded = 1;
     int cols = tab->n + 1;  // Numer of cols of the tableau.
     Fraction min = {-1, 1}; // Used to compute the pivot row.
-    Fraction tmp = {0 , 1};
     Fraction *elem = NULL;  // Element of the tableau.
 
     for (size_t i = 1; i <= tab->m; i++) {
@@ -42,7 +69,7 @@ char unbounded_check(Tableau *tab, size_t h, size_t *t) {
             unbounded = 0;
 
             // 'tmp' is the new minumum candidate.
-            tmp = fraction_divide(tab->data[i * cols], *elem);
+            Fraction tmp = fraction_divide(tab->data[i * cols], *elem);
             if (min.num == -1 || fraction_less(tmp, min)) {
                 min = tmp; // Update the minumum.
                 *t = i;    // Update the pivot row.
@@ -56,7 +83,7 @@ char unbounded_check(Tableau *tab, size_t h, size_t *t) {
 // If the tablau is not optimal, then 'h' contains the index of the
 // variable that enters the basis.
 char optimality_check(Tableau *tab, size_t *h) {
-    char optimal = 0;
+    char optimal = 1;
 
     for (size_t j = 1; j <= tab->n; j++) {
         if (tab->data[j].num < 0) { // If a reduced cost is negative.
@@ -81,7 +108,7 @@ int simplex(Tableau *tab, int *basis) {
     size_t cols = tab->n + 1;
 
     while (!optimal && !unbounded) {
-        printf("Current tableau - Itr: %d", itr);
+        printf("current tableau - itr: %d\n", itr);
         pretty_print_tableau(tab);
  
         // Optimality check.
@@ -92,11 +119,16 @@ int simplex(Tableau *tab, int *basis) {
 
             unbounded = unbounded_check(tab, h, &t);
             if (!unbounded) {
-                printf("Current pivot element = %d/%d\n", tab->data[t * cols + h].num, tab->data[t * cols + h].den); // FIXME: improve printing.
-                printf("x[%d] leaves the basis.\n", basis[t - 1]);
+                printf("Current pivot element = ");
+                fraction_print(tab->data[t * cols + h]);
+                printf("\nx[%d] leaves the basis.\n", basis[t - 1]);
+                pivot_operations(tab, h, t);
+
+                basis[t - 1] = h; // Update basis;
+                itr += 1;         // Increment iteration.
+                printf("\n");
             }
         }
-        break;
     }
 
     return 0;
