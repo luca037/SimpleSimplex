@@ -7,6 +7,13 @@ typedef struct {
     Fraction *data; // (m+1) x (n+1) matrix.
 } Tableau;
 
+void free_and_null(char **ptr) {
+    if (*ptr != NULL) {
+        free(*ptr);
+        *ptr = NULL;
+    }
+}
+
 // FIXME: implement minipivot.
 void pivot_operations(Tableau *tab, size_t h, size_t t) {
     int cols = tab->n + 1;
@@ -27,6 +34,7 @@ void pivot_operations(Tableau *tab, size_t h, size_t t) {
     }
 }
 
+// Print the tableau in a nice way :).
 void pretty_print_tableau(Tableau *tab) {
     size_t cols = tab->n + 1;
 
@@ -51,6 +59,43 @@ void pretty_print_tableau(Tableau *tab) {
         }
         printf("]\n");
     }
+}
+
+// Phase 1 of Two phases simplex method.
+void phase_one(Tableau *tab) {
+    // Create the tableau associated to the artificial problem.
+    Tableau artificial;
+    artificial.n = tab->n + tab->m; // Add 'm' artificial variables.
+    artificial.m = tab->m;
+    
+    // Allocate memory for the tableau.
+    size_t cols_a = artificial.n + 1; // Tableau cols - artificial.
+    size_t sz = cols_a * (artificial.m + 1); // Tableau size.
+    artificial.data = (Fraction*) malloc(sz * sizeof(Fraction));
+
+    // Copy the of original tableau.
+    size_t cols_o = tab->n + 1; // Tableau cols - original.
+    for (size_t i = 0; i <= tab->m; i++) {
+        for (size_t j = 0; j <= tab->n; j++) {
+            artificial.data[i * cols_a + j] = tab->data[i * cols_o + j];
+        }
+    }
+
+    // Identity matrix.
+    for (size_t i = 0; i <= tab->m; i++) {
+        for (size_t j = tab->n+1; j <= artificial.n; j++) {
+
+            if (i == (j - tab->n)) { // Principal diagonal.
+                artificial.data[i * cols_a +  j] = fraction_create(1, 1);
+            } else { // All other elements.
+                artificial.data[i * cols_a +  j] = fraction_create(0, 1);
+            }
+
+        }
+    }
+
+    printf("Artificial\n");
+    pretty_print_tableau(&artificial);
 }
 
 // FIXME: implement the bland's rule.
@@ -159,9 +204,12 @@ int main(void) {
     // Define the basis: it contains the indices of the variables.
     int basis[] = {3, 4};
 
-    //pretty_print_tableau(&tab);
+    printf("Original\n");
+    pretty_print_tableau(&tab);
+    phase_one(&tab);
 
-    simplex(&tab, basis);
+    //simplex(&tab, basis);
+
 
     return 0;
 }
