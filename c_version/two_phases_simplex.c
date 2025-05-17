@@ -15,7 +15,7 @@ void free_and_null(char **ptr) {
 }
 
 // FIXME: implement minipivot.
-void pivot_operations(Tableau *tab, size_t h, size_t t) {
+void pivot_operations(Tableau *tab, size_t h, size_t t, int minipivot, size_t row) {
     int cols = tab->n + 1;
     Fraction save = tab->data[t * cols + h];
 
@@ -23,15 +23,26 @@ void pivot_operations(Tableau *tab, size_t h, size_t t) {
         tab->data[t * cols + j] = fraction_divide(tab->data[t * cols + j], save);
     }
 
-    for (size_t i = 0; i <= tab->m; i++) {
-        if (i != t) {
-            save = tab->data[i * cols + h];
+    if (minipivot) {
+        if (row != t && !fraction_equal(tab->data[row * cols + h], fraction_create(0, 1))) {
+            save = tab->data[row * cols + h];
             for (size_t j = 0; j <= tab->n; j++) {
                 Fraction tmp = fraction_multiply(save, tab->data[t * cols + j]);
-                tab->data[i * cols + j] = fraction_subtract(tab->data[i * cols + j], tmp);
+                tab->data[row * cols + j] = fraction_subtract(tab->data[row * cols + j], tmp);
+            }
+        }
+    } else {
+        for (size_t i = 0; i <= tab->m; i++) {
+            if (i != t) {
+                save = tab->data[i * cols + h];
+                for (size_t j = 0; j <= tab->n; j++) {
+                    Fraction tmp = fraction_multiply(save, tab->data[t * cols + j]);
+                    tab->data[i * cols + j] = fraction_subtract(tab->data[i * cols + j], tmp);
+                }
             }
         }
     }
+
 }
 
 // Print the tableau in a nice way :).
@@ -59,43 +70,6 @@ void pretty_print_tableau(Tableau *tab) {
         }
         printf("]\n");
     }
-}
-
-// Phase 1 of Two phases simplex method.
-void phase_one(Tableau *tab) {
-    // Create the tableau associated to the artificial problem.
-    Tableau artificial;
-    artificial.n = tab->n + tab->m; // Add 'm' artificial variables.
-    artificial.m = tab->m;
-    
-    // Allocate memory for the tableau.
-    size_t cols_a = artificial.n + 1; // Tableau cols - artificial.
-    size_t sz = cols_a * (artificial.m + 1); // Tableau size.
-    artificial.data = (Fraction*) malloc(sz * sizeof(Fraction));
-
-    // Copy the of original tableau.
-    size_t cols_o = tab->n + 1; // Tableau cols - original.
-    for (size_t i = 0; i <= tab->m; i++) {
-        for (size_t j = 0; j <= tab->n; j++) {
-            artificial.data[i * cols_a + j] = tab->data[i * cols_o + j];
-        }
-    }
-
-    // Identity matrix.
-    for (size_t i = 0; i <= tab->m; i++) {
-        for (size_t j = tab->n+1; j <= artificial.n; j++) {
-
-            if (i == (j - tab->n)) { // Principal diagonal.
-                artificial.data[i * cols_a +  j] = fraction_create(1, 1);
-            } else { // All other elements.
-                artificial.data[i * cols_a +  j] = fraction_create(0, 1);
-            }
-
-        }
-    }
-
-    printf("Artificial\n");
-    pretty_print_tableau(&artificial);
 }
 
 // FIXME: implement the bland's rule.
@@ -167,7 +141,7 @@ int simplex(Tableau *tab, int *basis) {
                 printf("Current pivot element = ");
                 fraction_print(tab->data[t * cols + h]);
                 printf("\nx[%d] leaves the basis.\n", basis[t - 1]);
-                pivot_operations(tab, h, t);
+                pivot_operations(tab, h, t, 0, 0);
 
                 basis[t - 1] = h; // Update basis;
                 itr += 1;         // Increment iteration.
@@ -177,6 +151,79 @@ int simplex(Tableau *tab, int *basis) {
     }
 
     return 0;
+}
+
+// FIXME: check degeneracy cases.
+// Phase 1 of Two phases simplex method.
+void phase_one(Tableau *tab) {
+    // Create the tableau associated to the artificial problem.
+    Tableau artificial;
+    artificial.n = tab->n + tab->m; // Add 'm' artificial variables.
+    artificial.m = tab->m;
+    
+    // Allocate memory for the tableau.
+    size_t cols_a = artificial.n + 1; // Tableau cols - artificial.
+    size_t sz = cols_a * (artificial.m + 1); // Tableau size.
+    artificial.data = (Fraction*) malloc(sz * sizeof(Fraction));
+
+    if (artificial.data == NULL) {
+        fprintf(stderr, "Error - No enough memory to create artificial probelm.");
+        goto TERMINATE;
+    }
+
+    // Copy the of original tableau.
+    size_t cols_o = tab->n + 1; // Tableau cols - original.
+    for (size_t i = 1; i <= tab->m; i++) {
+        for (size_t j = 0; j <= tab->n; j++) {
+            artificial.data[i * cols_a + j] = tab->data[i * cols_o + j];
+        }
+    }
+
+    // Update row0 to reflect artificial problem objective.
+    for (size_t j = 0; j <= artificial.n; j++) {
+        if (j > tab->n) {
+            artificial.data[j] = fraction_create(1, 1);
+        } else {
+            artificial.data[j] = fraction_create(0, 1);
+        }
+    }
+
+    // Identity matrix.
+    for (size_t i = 1; i <= tab->m; i++) {
+        for (size_t j = tab->n+1; j <= artificial.n; j++) {
+
+            if (i == (j - tab->n)) { // Principal diagonal.
+                artificial.data[i * cols_a +  j] = fraction_create(1, 1);
+            } else { // All other elements.
+                artificial.data[i * cols_a +  j] = fraction_create(0, 1);
+            }
+
+        }
+    }
+
+    // Bring artificial tableau in his canonical form.
+    for (size_t i = 1; i <= artificial.m; i++) {
+        pivot_operations(&artificial, tab->n + i, i, 1, 0);
+    }
+
+    // Define the basis.
+    int *basis = (int*) malloc(artificial.m * sizeof(int));
+    if (basis == NULL) {
+        fprintf(stderr, "Error - No enough memory to create artificial problem \
+                         basis.");
+        goto TERMINATE;
+    }
+
+    for (size_t j = 0; j < artificial.m; j++) {
+        basis[j] = j + tab->n + 1;
+    }
+
+    // Solve the artificial problem.
+    simplex(&artificial, basis);
+
+TERMINATE:
+    free_and_null((char**) &artificial.data);
+    free_and_null((char**) &basis);
 }
 
 int main(void) {
@@ -189,15 +236,16 @@ int main(void) {
     // Define the tableau.
     Tableau tab;
     tab.n = 4;
-    tab.m = 2;
+    tab.m = 3;
 
     //const size_t sz = (tab.n + 1) * (tab.m + 1);
 
     // Define the entries of the tableau (p.47).
     Fraction tab_data[] = {
-        {0, 1}, {-1, 1}, {-1, 1}, {0, 1}, {0, 1},
-        {24, 1}, {6, 1}, {4, 1}, {1, 1}, {0, 1},
-        {6, 1}, {3, 1}, {-2, 1}, {0, 1}, {1, 1},
+        {0, 1}, {1, 1}, {1, 1}, {2, 1}, {4, 1},
+        {1, 1}, {0, 1}, {2, 1}, {0, 1}, {-3, 1},
+        {0, 1}, {1, 1}, {0, 1}, {0, 1}, {-1, 1},
+        {1, 1}, {-1, 1}, {0, 1}, {1, 1}, {0, 1},
     };
     tab.data = tab_data;
 
