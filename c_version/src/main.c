@@ -1,4 +1,4 @@
-#include "fraction.h"
+#include "../include/fraction.h"
 #include <stdio.h>
 
 // FIXME: add a "constructor".
@@ -120,7 +120,6 @@ char optimality_check(Tableau *tab, size_t *h) {
     return optimal;
 }
 
-// FIXME: add return status.
 int simplex(Tableau *tab, size_t *basis) {
     char unbounded = 0; // True if the problem is unbounded.
     char optimal = 0;   // True if found an optimal solution.
