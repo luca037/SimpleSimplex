@@ -19,7 +19,6 @@ void free_and_null(char **ptr) {
     }
 }
 
-// FIXME: implement minipivot.
 void pivot_operations(Tableau *tab, size_t h, size_t t, int minipivot, size_t row) {
     int cols = tab->n + 1;
     Fraction save = tab->data[t * cols + h];
@@ -226,7 +225,7 @@ int phase_one(Tableau *tab, size_t *basis) {
     }
 
     // Solve the artificial problem. Don't need to check for the status
-    // since the artificial problem is always never unbounded.
+    // since the artificial problem is never unbounded.
     simplex(&artificial, basis);
 
     // Check solution status.
@@ -236,10 +235,36 @@ int phase_one(Tableau *tab, size_t *basis) {
         goto TERMINATE;
     }
 
-    // Else... original problem admits a feasible solution.
-    status = FEASIBLE;
-
     // FIXME: need to check degeneracy.
+    // Check degeneracy cases.
+    for (size_t i = 0; i < tab->m; i++) {
+        if (basis[i] > tab->n) { // Found degeneracy.
+            printf("Found degeneracy: variable x[%lu].\n", basis[i]);
+
+            // Find first element in row (i+1) of the tableau that is != 0.
+            int remove_line = 1;
+            for (size_t j = 1; j <= tab->n; j++) {
+
+                Fraction elem = tab->data[(i+1) * cols_o + j];
+                if (!fraction_equal(elem, fraction_create(0, 1))) {
+                    printf("x[%lu] enters the basis, x[%lu] leaves.\n", j, basis[i]);
+                    pivot_operations(tab, j, i+1, 0, 0);
+                    basis[i] = j;    // Update basis.
+                    remove_line = 0; // No need to remove the line.
+                    break;
+                }
+            }
+
+            if (remove_line) { // FIXME: manage this case.
+                fprintf(stderr, "Error - Matrix A is not full rank...\n");
+                goto TERMINATE;
+            }
+
+        }
+    }
+
+    // Original problem admits a feasible solution.
+    status = FEASIBLE;
 
     // Copy solution to original tableau.
     for (size_t i = 1; i <= tab->m; i++) {
@@ -263,17 +288,20 @@ int main(void) {
     
     // Define the tableau.
     Tableau tab;
-    tab.n = 4;
-    tab.m = 3;
+    tab.n = 3;
+    tab.m = 2;
 
     //const size_t sz = (tab.n + 1) * (tab.m + 1);
 
     // Define the entries of the tableau (p.47).
     Fraction tab_data[] = {
-        {0, 1}, {1, 1}, {1, 1}, {2, 1}, {4, 1},
-        {1, 1}, {0, 1}, {2, 1}, {0, 1}, {-3, 1},
-        {0, 1}, {1, 1}, {0, 1}, {0, 1}, {-1, 1},
-        {1, 1}, {-1, 1}, {0, 1}, {1, 1}, {0, 1},
+        //{0, 1}, {1, 1}, {1, 1}, {2, 1}, {4, 1},
+        //{1, 1}, {0, 1}, {2, 1}, {0, 1}, {-3, 1},
+        //{0, 1}, {1, 1}, {0, 1}, {0, 1}, {-1, 1},
+        //{1, 1}, {-1, 1}, {0, 1}, {1, 1}, {0, 1},
+        {0, 1}, {1, 1}, {1, 1}, {10, 1}, 
+        {2, 1}, {0, 1}, {1, 1}, {4, 1},
+        {2, 1}, {-2, 1}, {1, 1}, {-6, 1},
     };
     tab.data = tab_data;
 
