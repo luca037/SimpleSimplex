@@ -1,4 +1,4 @@
-#include "fraction.h"
+#include "../include/fraction.h"
 #include <stdio.h>  // For fprintf, printf
 #include <stdlib.h> // For abs
 
@@ -97,6 +97,17 @@ Fraction fraction_divide(Fraction f1, Fraction f2) {
     // Note: Intermediate multiplication might overflow if inputs are large.
 
     return fraction_create(result_num, result_den);
+}
+
+Fraction fraction_abs(Fraction f) {
+    int num = f.num, den = f.den;
+    if (num < 0) {
+        num *= -1;
+    } else if (den < 0) {
+        den *= -1;
+    }
+
+    return fraction_create(num, den);
 }
 
 // Comparison functions (New implementations)
