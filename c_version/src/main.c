@@ -284,11 +284,100 @@ TERMINATE:
     return status;
 }
 
+// FIXME: implement blan's rule.
+int dual_optimality_check(Tableau *tab, size_t *t) {
+    int optimal = 1;
+    int cols = tab->n + 1;
+
+    for (size_t i = 1; i <= tab->m; i++) {
+        if (tab->data[i * cols].num < 0) { // If a basic variable is negative.
+            optimal = 0;
+            *t = i; // i leaves the basis.
+            break;
+        }
+    }
+
+    return optimal;
+};
+
+char dual_unbounded_check(Tableau *tab, size_t t, size_t *h) {
+    char unbounded = 1;
+    int cols = tab->n + 1;  // Numer of cols of the tableau.
+    Fraction min = {-1, 1}; // Used to compute the pivot row.
+    Fraction *elem = NULL;  // Element of the tableau.
+
+    for (size_t j = 1; j <= tab->m; j++) {
+        elem = &tab->data[t * cols + j];
+
+        if (elem->num < 0) {
+            unbounded = 0;
+
+            // 'tmp' is the new minumum candidate.
+            Fraction tmp = fraction_divide(tab->data[j], *elem);
+            tmp = fraction_abs(tmp);
+            if (min.num == -1 || fraction_less(tmp, min)) {
+                min = tmp; // Update the minumum.
+                *h = j;    // Update the leaving candidate.
+            }
+        }
+    }
+    return unbounded;
+}
+
+int dual_simplex(Tableau *tab, size_t *basis) {
+    char unbounded = 0; // True if the problem is unbounded.
+    char optimal = 0;   // True if found an optimal solution.
+
+    int itr = 0; // Iteration number.
+
+    size_t h = -1; // Index of the variable that enters the basis.
+    size_t t = 0; // Pivot row.
+
+    size_t cols = tab->n + 1;
+
+    // Start the simplex algorithm.
+    while (!optimal && !unbounded) {
+        printf("Current tableau - itr: %d\n", itr);
+        pretty_print_tableau(tab);
+ 
+        // Optimality check.
+        optimal = dual_optimality_check(tab, &t);
+
+        if (!optimal) {
+            printf("x[%lu] leaves the basis.\n", basis[t - 1]);
+
+            unbounded = dual_unbounded_check(tab, t, &h);
+
+            if (!unbounded) {
+                printf("Current pivot element = ");
+                fraction_print(tab->data[t * cols + h]);
+                printf("\nx[%lu] enters the basis.\n", h);
+                pivot_operations(tab, h, t, 0, 0);
+
+                basis[t - 1] = h; // Update basis;
+                itr += 1;         // Increment iteration.
+                printf("\n");
+            }
+        }
+    }
+
+    // Check the result.
+    if (optimal) {
+        printf("Found an optimal solution.\n");
+        Fraction cost = fraction_multiply(tab->data[0], fraction_create(-1, 1));
+        printf("Cost = "); fraction_print(cost); printf("\n");
+        return OPTIMAL;
+    }
+
+    return UNBOUNDED;
+}
+
+// FIXME: write a tester function.
 int main(void) {
     
     // Define the tableau.
     Tableau tab;
-    tab.n = 3;
+    tab.n = 5;
     tab.m = 2;
 
     //const size_t sz = (tab.n + 1) * (tab.m + 1);
@@ -299,9 +388,12 @@ int main(void) {
         //{1, 1}, {0, 1}, {2, 1}, {0, 1}, {-3, 1},
         //{0, 1}, {1, 1}, {0, 1}, {0, 1}, {-1, 1},
         //{1, 1}, {-1, 1}, {0, 1}, {1, 1}, {0, 1},
-        {0, 1}, {1, 1}, {1, 1}, {10, 1}, 
-        {2, 1}, {0, 1}, {1, 1}, {4, 1},
-        {2, 1}, {-2, 1}, {1, 1}, {-6, 1},
+        //{0, 1}, {1, 1}, {1, 1}, {10, 1}, 
+        //{2, 1}, {0, 1}, {1, 1}, {4, 1},
+        //{2, 1}, {-2, 1}, {1, 1}, {-6, 1},
+        {0, 1}, {3, 1}, {4, 1}, {5, 1}, {0, 1}, {0, 1},
+        {-6, 1}, {-2, 1}, {-2, 1}, {-1, 1}, {1, 1}, {0, 1},
+        {-5, 1}, {-1, 1}, {-2, 1}, {-3, 1}, {0, 1}, {1, 1},
     };
     tab.data = tab_data;
 
@@ -312,12 +404,15 @@ int main(void) {
         goto TERMINATE;
     }
 
-    printf("### Starting phase one... ###\n");
-    int status = phase_one(&tab, basis);
-    if (status == FEASIBLE) {
-        printf("\n### Problem is feasible. Starting phase two... ###\n");
-        simplex(&tab, basis);
-    }
+    size_t bas[] = {4, 5};
+    dual_simplex(&tab, bas);
+
+    //printf("### Starting phase one... ###\n");
+    //int status = phase_one(&tab, basis);
+    //if (status == FEASIBLE) {
+    //    printf("\n### Problem is feasible. Starting phase two... ###\n");
+    //    simplex(&tab, basis);
+    //}
 
 TERMINATE:
     free_and_null((char**) &basis);
