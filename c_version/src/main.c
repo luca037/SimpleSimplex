@@ -4,50 +4,74 @@
 #include "../include/utils.h"
 #include "../include/simple_simplex.h"
 
-// FIXME: write a tester function.
+
+// Function that tests the two phases simplex.
+void two_phase_tester(void);
+
+// Function that tests the dual simplex.
+void dual_simplex_tester(void);
+
+
 int main(void) {
-    
+
+    dual_simplex_tester();
+
+    return 0;
+}
+
+
+void two_phase_tester(void) {
     // Define the tableau.
-    Tableau tab;
-    tab.n = 5;
-    tab.m = 2;
+    Tableau tab = {
+        3, // # cols 
+        2, // # rows
+        NULL
+    };
 
-    //const size_t sz = (tab.n + 1) * (tab.m + 1);
+    // Define the original tableau.
+    Fraction datas[] = {
+        {0, 1}, {1, 1}, {1, 1}, {10, 1}, 
+        {2, 1}, {0, 1}, {1, 1}, {4, 1},
+        {2, 1}, {-2, 1}, {1, 1}, {-6, 1},
+    };
+    tab.data = datas;
 
-    // Define the entries of the tableau (p.47).
-    Fraction tab_data[] = {
-        //{0, 1}, {1, 1}, {1, 1}, {2, 1}, {4, 1},
-        //{1, 1}, {0, 1}, {2, 1}, {0, 1}, {-3, 1},
-        //{0, 1}, {1, 1}, {0, 1}, {0, 1}, {-1, 1},
-        //{1, 1}, {-1, 1}, {0, 1}, {1, 1}, {0, 1},
-        //{0, 1}, {1, 1}, {1, 1}, {10, 1}, 
-        //{2, 1}, {0, 1}, {1, 1}, {4, 1},
-        //{2, 1}, {-2, 1}, {1, 1}, {-6, 1},
+    // Allocate memory for the basis.
+    size_t *basis = (size_t*) malloc(tab.m * sizeof(size_t));
+    if (basis == NULL) {
+        fprintf(stderr, "Error - Not enough memory to allocate the basis.\n");
+        goto TERMINATE;
+    }
+
+    printf("### Starting phase one... ###\n");
+    int status = phase_one(&tab, basis);
+    if (status == FEASIBLE) {
+        printf("\n### Problem is feasible. Starting phase two... ###\n");
+        simplex(&tab, basis);
+    }
+
+TERMINATE:
+    // Free up allocated memory.
+    free_and_null((char**) &basis);
+}
+
+void dual_simplex_tester(void) {
+    // Define the tableau.
+    Tableau tab = {
+        5, // # cols
+        2, // # rows
+        NULL
+    };
+
+    // Define the tableau.
+    Fraction datas[] = {
         {0, 1}, {3, 1}, {4, 1}, {5, 1}, {0, 1}, {0, 1},
         {-6, 1}, {-2, 1}, {-2, 1}, {-1, 1}, {1, 1}, {0, 1},
         {-5, 1}, {-1, 1}, {-2, 1}, {-3, 1}, {0, 1}, {1, 1},
     };
-    tab.data = tab_data;
+    tab.data = datas;
 
-    // Define the basis: it contains the indices of the variables.
-    size_t *basis = (size_t*) malloc(tab.m * sizeof(size_t));
-    if (basis == NULL) {
-        fprintf(stderr, "Error - Not enough memory to allocate the basis\n");
-        goto TERMINATE;
-    }
-
-    size_t bas[] = {4, 5};
-    dual_simplex(&tab, bas);
-
-    //printf("### Starting phase one... ###\n");
-    //int status = phase_one(&tab, basis);
-    //if (status == FEASIBLE) {
-    //    printf("\n### Problem is feasible. Starting phase two... ###\n");
-    //    simplex(&tab, basis);
-    //}
-
-TERMINATE:
-    free_and_null((char**) &basis);
-
-    return 0;
+    // Define the basis.
+    size_t basis[] = {4, 5};
+    dual_simplex(&tab, basis);
 }
