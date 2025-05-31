@@ -57,29 +57,33 @@ void pretty_print_tableau(Tableau *tab) {
     }
 }
 
-// FIXME: implement the bland's rule.
 // Return 1 if the problem is unbounded, 0 otherwise.
 // If the problem is not unbounded, then 't' contains the pivot row index.
-char unbounded_check(Tableau *tab, size_t h, size_t *t) {
+char unbounded_check(Tableau *tab, size_t h, size_t *t, size_t *basis) {
     char unbounded = 1;
     int cols = tab->n + 1;  // Numer of cols of the tableau.
     Fraction min = {-1, 1}; // Used to compute the pivot row.
-    Fraction *elem = NULL;  // Element of the tableau.
 
     for (size_t i = 1; i <= tab->m; i++) {
-        elem = &tab->data[i * cols + h];
+        Fraction *elem = &tab->data[i * cols + h]; // Element of the tableau.
 
         if (elem->num > 0) {
             unbounded = 0;
 
             // 'tmp' is the new minumum candidate.
             Fraction tmp = fraction_divide(tab->data[i * cols], *elem);
+
             if (min.num == -1 || fraction_less(tmp, min)) {
+                // Update candidate due to smallest value.
                 min = tmp; // Update the minumum.
                 *t = i;    // Update the pivot row.
+            } else if (fraction_equal(tmp, min) && basis[i-1] < basis[*t-1]) {
+                // Update candidate due to Bland's rule.
+                *t = i; // Update the pivot row.
             }
         }
     }
+
     return unbounded;
 }
 
@@ -122,7 +126,7 @@ int simplex(Tableau *tab, size_t *basis) {
         if (!optimal) {
             printf("x[%lu] enters the basis.\n", h);
 
-            unbounded = unbounded_check(tab, h, &t);
+            unbounded = unbounded_check(tab, h, &t, basis);
             if (!unbounded) {
                 printf("Current pivot element = ");
                 fraction_print(tab->data[t * cols + h]);
@@ -265,30 +269,35 @@ TERMINATE:
     return status;
 }
 
-// FIXME: implement blan's rule.
-int dual_optimality_check(Tableau *tab, size_t *t) {
+// Return 1 if the tablau is (dual) optimal, 0 otherwise.
+// If the tablau is not optimal, then 't' contains the index of the pivot row.
+int dual_optimality_check(Tableau *tab, size_t *t, size_t *basis) {
     int optimal = 1;
     int cols = tab->n + 1;
+    size_t tmp = cols; // Tmp index of the var that leaves the basis.
 
     for (size_t i = 1; i <= tab->m; i++) {
-        if (tab->data[i * cols].num < 0) { // If a basic variable is negative.
+        // Update if element is negative and check Bland's rule.
+        if (tab->data[i * cols].num < 0 && basis[i-1] < tmp) { 
             optimal = 0;
-            *t = i; // i leaves the basis.
-            break;
+            *t = i;  // Update pivot row.
+            tmp = basis[i-1]; // Index variable that leaves the basis.
         }
     }
 
     return optimal;
 };
 
+// Returns 1 if the problem is unbounded, 0 otherwise.
+// If the problem is not unbounded, then 'h' contains the variable that enters
+// the basis.
 char dual_unbounded_check(Tableau *tab, size_t t, size_t *h) {
     char unbounded = 1;
     int cols = tab->n + 1;  // Numer of cols of the tableau.
     Fraction min = {-1, 1}; // Used to compute the pivot row.
-    Fraction *elem = NULL;  // Element of the tableau.
 
-    for (size_t j = 1; j <= tab->m; j++) {
-        elem = &tab->data[t * cols + j];
+    for (size_t j = 1; j <= tab->n; j++) {
+        Fraction *elem = &tab->data[t * cols + j]; // Element of the tableau.
 
         if (elem->num < 0) {
             unbounded = 0;
@@ -296,6 +305,7 @@ char dual_unbounded_check(Tableau *tab, size_t t, size_t *h) {
             // 'tmp' is the new minumum candidate.
             Fraction tmp = fraction_divide(tab->data[j], *elem);
             tmp = fraction_abs(tmp);
+
             if (min.num == -1 || fraction_less(tmp, min)) {
                 min = tmp; // Update the minumum.
                 *h = j;    // Update the leaving candidate.
@@ -322,7 +332,7 @@ int dual_simplex(Tableau *tab, size_t *basis) {
         pretty_print_tableau(tab);
  
         // Optimality check.
-        optimal = dual_optimality_check(tab, &t);
+        optimal = dual_optimality_check(tab, &t, basis);
 
         if (!optimal) {
             printf("x[%lu] leaves the basis.\n", basis[t - 1]);

@@ -24,7 +24,7 @@ void pretty_print_tableau(Tableau *tab);
 // FIXME: implement the bland's rule.
 // Return 1 if the problem is unbounded, 0 otherwise.
 // If the problem is not unbounded, then 't' contains the pivot row index.
-char unbounded_check(Tableau *tab, size_t h, size_t *t);
+char unbounded_check(Tableau *tab, size_t h, size_t *t, size_t *basis);
 
 // Return 1 if the tablau is optimal, 0 otherwise.
 // If the tablau is not optimal, then 'h' contains the index of the
@@ -37,7 +37,7 @@ int simplex(Tableau *tab, size_t *basis);
 int phase_one(Tableau *tab, size_t *basis);
 
 // FIXME: implement blan's rule.
-int dual_optimality_check(Tableau *tab, size_t *t);
+int dual_optimality_check(Tableau *tab, size_t *t, size_t *basis);
 
 char dual_unbounded_check(Tableau *tab, size_t t, size_t *h);
 
