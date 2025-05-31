@@ -9,8 +9,7 @@ void pivot_operations(Tableau *tab, size_t h, size_t t, int minipivot, size_t ro
     }
 
     if (minipivot) {
-        // FIXME: implement fraction function that works with integers...
-        if (row != t && !fraction_equal(tab->data[row * cols + h], fraction_create(0, 1))) {
+        if (row != t && tab->data[row * cols + h].num != 0) {
             save = tab->data[row * cols + h];
             for (size_t j = 0; j <= tab->n; j++) {
                 Fraction tmp = fraction_multiply(save, tab->data[t * cols + j]);
@@ -140,7 +139,7 @@ int simplex(Tableau *tab, size_t *basis) {
     // Check the result.
     if (optimal) {
         printf("Found an optimal solution.\n");
-        Fraction cost = fraction_multiply(tab->data[0], fraction_create(-1, 1));
+        Fraction cost = fraction_chg_sign(tab->data[0]);
         printf("Cost = "); fraction_print(cost); printf("\n");
         return OPTIMAL;
     }
@@ -211,8 +210,8 @@ int phase_one(Tableau *tab, size_t *basis) {
     simplex(&artificial, basis);
 
     // Check solution status.
-    Fraction cost = fraction_multiply(tab->data[0], fraction_create(-1, 1));
-    if (!fraction_equal(cost, fraction_create(0, 1))) {
+    Fraction cost = fraction_chg_sign(tab->data[0]);
+    if (cost.num != 0) {
         printf("Original problem is infeasible\n");
         goto TERMINATE;
     }
@@ -228,7 +227,7 @@ int phase_one(Tableau *tab, size_t *basis) {
             for (size_t j = 1; j <= tab->n; j++) {
 
                 Fraction elem = tab->data[(i+1) * cols_o + j];
-                if (!fraction_equal(elem, fraction_create(0, 1))) {
+                if (elem.num != 0) {
                     printf("x[%lu] enters the basis, x[%lu] leaves.\n", j, basis[i]);
                     pivot_operations(tab, j, i+1, 0, 0);
                     basis[i] = j;    // Update basis.
@@ -346,7 +345,7 @@ int dual_simplex(Tableau *tab, size_t *basis) {
     // Check the result.
     if (optimal) {
         printf("Found an optimal solution.\n");
-        Fraction cost = fraction_multiply(tab->data[0], fraction_create(-1, 1));
+        Fraction cost = fraction_chg_sign(tab->data[0]);
         printf("Cost = "); fraction_print(cost); printf("\n");
         return OPTIMAL;
     }

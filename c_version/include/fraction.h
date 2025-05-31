@@ -23,6 +23,7 @@ Fraction fraction_subtract(Fraction f1, Fraction f2);
 Fraction fraction_multiply(Fraction f1, Fraction f2);
 Fraction fraction_divide(Fraction f1, Fraction f2); // Handles division by zero fraction
 Fraction fraction_abs(Fraction f);
+Fraction fraction_chg_sign(Fraction f);
 
 // Comparison functions
 // These functions return 1 for true, 0 for false.

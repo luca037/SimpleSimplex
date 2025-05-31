@@ -99,6 +99,8 @@ Fraction fraction_divide(Fraction f1, Fraction f2) {
     return fraction_create(result_num, result_den);
 }
 
+// Absolute value: |(a/b)| = |a| / |b|.
+// The result is created and simplified by fraction_create.
 Fraction fraction_abs(Fraction f) {
     int num = f.num, den = f.den;
     if (num < 0) {
@@ -108,6 +110,12 @@ Fraction fraction_abs(Fraction f) {
     }
 
     return fraction_create(num, den);
+}
+
+// Change sign: -(a/b) = -1/1 * (a/b)
+// The result is created and simplified by fraction_create.
+Fraction fraction_chg_sign(Fraction f) {
+    return fraction_multiply(f, fraction_create(-1, 1));
 }
 
 // Comparison functions (New implementations)
