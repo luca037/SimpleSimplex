@@ -1,8 +1,8 @@
 # SimpleSimplex
 
 
-https://github.com/user-attachments/assets/a7fffa66-66c3-4ddb-ba6c-b616d5cd6acc
 
+https://github.com/user-attachments/assets/a9591e0a-38bb-4a6c-80d5-a96a9467e2fe
 
 
 
