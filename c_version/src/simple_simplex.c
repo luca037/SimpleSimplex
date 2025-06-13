@@ -1,5 +1,68 @@
 #include "../include/simple_simplex.h"
 
+
+int load_tableau(
+        const char *num_fn,
+        const char *den_fn,
+        int rows,
+        int cols,
+        Tableau *tab
+) {
+    int status = 0;
+
+    // Open the numerator and denominator files.
+    FILE *num_f = fopen(num_fn, "rb");
+    FILE *den_f = fopen(den_fn, "rb");
+    if (!num_f || !den_f) {
+        fprintf(stderr, "Error - Cannot open numerator or denominator file.\n");
+        // Close files, if necessary.
+        status = 1;
+        goto TERMINATE;
+    }
+    
+    // Allocate memory for the matrix.
+    Fraction *matrix = malloc(rows * cols * sizeof(Fraction));
+    if (!matrix) {
+        fprintf(stderr, "Error -  Memory allocation failed.\n");
+        status = 1;
+        goto TERMINATE;
+    }
+    
+    // Store numerators and denominators.
+    int *numerators = malloc(rows * cols * sizeof(int));
+    int *denominators = malloc(rows * cols * sizeof(int));
+
+    int num_sz = fread(numerators, sizeof(int), rows * cols, num_f);
+    int den_sz = fread(denominators, sizeof(int), rows * cols, den_f);
+    
+    // Check if all data are present.
+    if ((num_sz != rows * cols) || (den_sz != rows * cols)) {
+        fprintf(stderr, "Error - Cannot read numerator and/or denominators data.\n");
+        status = 1;
+        goto TERMINATE;
+    }
+    
+    // Init the matrix.
+    for (int i = 0; i < rows * cols; i++) {
+        matrix[i] = fraction_create(numerators[i], denominators[i]);
+    }
+
+    // Init the tableau.
+    tab->n = cols - 1; // Cols of the constraint matrix A.
+    tab->m = rows - 1; // Rows of the constraint matrix A.
+    tab->data = matrix;
+
+TERMINATE:
+    // Release reesources.
+    free_and_null((char**) &numerators);
+    free_and_null((char**) &denominators);
+
+    if (num_f) fclose(num_f);
+    if (den_f) fclose(den_f);
+
+    return status;
+}
+
 void pivot_operations(Tableau *tab, size_t h, size_t t, int minipivot, size_t row) {
     int cols = tab->n + 1;
     Fraction save = tab->data[t * cols + h];

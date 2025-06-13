@@ -2,6 +2,7 @@
 #define SIMPLE_SIMPLEX_H
 
 #include <stdio.h>
+
 #include "../include/fraction.h"
 #include "../include/utils.h"
 
@@ -15,6 +16,11 @@ typedef struct {
 enum tableau_status {
     INFEASIBLE, FEASIBLE, OPTIMAL, UNBOUNDED
 };
+
+
+// Load the tableau specified by the user.
+int load_tableau(const char *num_fn, const char *den_fn, int rows, int cols,
+        Tableau *tab);
 
 void pivot_operations(Tableau *tab, size_t h, size_t t, int minipivot, size_t row);
 
@@ -43,5 +49,6 @@ char dual_unbounded_check(Tableau *tab, size_t t, size_t *h);
 
 // Dual simplex algorithm.
 int dual_simplex(Tableau *tab, size_t *basis);
+
 
 #endif
