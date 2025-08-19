@@ -22,6 +22,9 @@ enum tableau_status {
 int load_tableau(const char *num_fn, const char *den_fn, int rows, int cols,
         Tableau *tab);
 
+// Find the starting point for the dual simplex.
+int search_starting_basis(Tableau *tab, size_t *basis);
+
 void pivot_operations(Tableau *tab, size_t h, size_t t, int minipivot, size_t row);
 
 // Print the tableau in a nice way :).
@@ -50,5 +53,7 @@ char dual_unbounded_check(Tableau *tab, size_t t, size_t *h);
 // Dual simplex algorithm.
 int dual_simplex(Tableau *tab, size_t *basis);
 
+// Cutting plane algorithm.
+int cutting_plane(Tableau *tab, size_t *basis);
 
 #endif

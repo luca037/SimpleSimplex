@@ -1,5 +1,6 @@
 #include "../include/simple_simplex.h"
 
+#include <stdlib.h>
 
 int load_tableau(
         const char *num_fn,
@@ -61,6 +62,49 @@ TERMINATE:
     if (den_f) fclose(den_f);
 
     return status;
+}
+
+// Function used to find the starting base for the (primal or dual) simplex.
+int search_starting_basis(Tableau *tab, size_t *basis) {
+    int cols = tab->n + 1;
+    size_t idx = 0;
+    Fraction one = fraction_create(1, 1);
+
+    for (size_t j = 1; j <= tab->n; j++) {
+        
+        // Check whether reduced cost is zero.
+        if (tab->data[j].num != 0) continue;
+
+        // Check if there is an identity column.
+        char one_found = 0;
+        char in_basis = 1;
+
+        for (size_t i = 1; i <= tab->m; i++) {
+            Fraction elem = tab->data[i * cols + j];
+
+            if (fraction_greater(elem, one) || elem.num < 0) {
+                in_basis = 0;
+                break;
+            } else if (fraction_equal(elem, one)) {
+                if (one_found) {
+                    in_basis = 0;
+                    break;
+                }
+                one_found = 1;
+            }
+        }
+
+        // Save to basis, if necessary.
+        if (in_basis) {
+            basis[idx] = j;
+            idx++;
+        }
+    }
+
+    // If a full basis was not found, report the error.
+    if (idx != tab->m - 1) return 1;
+
+    return 0;
 }
 
 void pivot_operations(Tableau *tab, size_t h, size_t t, int minipivot, size_t row) {
@@ -424,4 +468,149 @@ int dual_simplex(Tableau *tab, size_t *basis) {
     }
 
     return UNBOUNDED;
+}
+
+// Returns 1 if the current solution is integer, 0 otherwise.
+// If the solution is not integer, then in 'row_idx' is stored the row index
+// of the first non integer variable.
+int check_integrality(Tableau *tab, size_t *row_idx) {
+    size_t cols = tab->n + 1;
+    for (size_t i = 1; i <= tab->m; i++) {
+        Fraction elem = tab->data[i * cols];
+        if (elem.den != 1) {
+            *row_idx = i;
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int augment_tableau(Tableau *tab, size_t new_n, size_t new_m) {
+    // Check if augmetation is not needed.
+    if (new_n <= tab->n || new_m <= tab->m) {
+        fprintf(stderr, "Error - Augmentation is not needed since the new size"
+                        " = old size.\n");
+        return 1;
+    }
+
+    size_t old_cols = tab->n + 1; // Tableau nuber of columns.
+    size_t new_cols = new_n + 1; // Augmented tableau nuber of columns.
+    Fraction *aug_tab = NULL; // The augmented tableau.
+
+    // Compute the size of the augmented tableau.
+    size_t old_len = (tab->m + 1) * (tab->n + 1);
+    size_t new_len = old_len + new_m + new_n + 3;
+
+    // Allocate space for the augmented tableau.
+    aug_tab = malloc(new_len * sizeof(Fraction));
+    if (aug_tab == NULL) {
+        fprintf(stderr, "Error - Not enough space for augmented tableau.\n");
+        return 1;
+    }
+
+    // Copy the data in the augmented tableau.
+    for (size_t i = 0; i <= tab->m; i++) {
+        for (size_t j = 0; j <= tab->n; j++) {
+            aug_tab[i * new_cols + j] = tab->data[i * old_cols + j];
+        }
+    }
+
+    // Free memory of old tableau.
+    free_and_null((char**) &tab->data);
+
+    // Finally augment the tableau.
+    tab->data = aug_tab;
+    tab->n += 1;
+    tab->m += 1;
+
+    return 0;
+}
+
+int cutting_plane(Tableau *tab, size_t *basis) {
+
+    // Phase 1.
+    printf("### Starting phase one... ###\n");
+    int status = phase_one(tab, basis);
+    if (status == INFEASIBLE) {
+        return status;
+    }
+
+    // Simplex (phase 2).
+    printf("\n### Problem is feasible. Starting phase two... ###\n");
+    status = simplex(tab, basis);
+    if (status == UNBOUNDED) {
+        return status;
+    }
+
+//    // First create a copy of the tableau.
+//    // This new tableau will be augmented (not the original one).
+//    Tableau aug_tab; // Augmented tableau.
+//    aug_tab.n = tab->n;
+//    aug_tab.m = tab->m;
+//
+    //// Allocate space.
+    //size_t len = (aug_tab.m + 1) * (aug_tab.n + 1);
+    //aug_tab.data = malloc(len * sizeof(Fraction));
+    //if (aug_tab.data == NULL) {
+    //    fprintf(stderr, "Error - Not enough space for augmented tableau.\n");
+    //    goto TERMINATE;
+    //}
+
+    //// Copy data from original tableau.
+    //for (size_t i = 0; i <= tab->m; i++) {
+    //    for (size_t j = 0; j <= tab->n; j++) {
+    //        aug_tab.data[i * cols + j] = tab->data[i * cols + j];
+    //    }
+    //}
+
+    // Cutting plane algorithm.
+    size_t row_idx = 0; // Index of the first non integer variable.
+
+    for (size_t itr = 0; !check_integrality(tab, &row_idx); itr++) {
+        printf("\n### Cutting Plane - itr: %lu ###\n", itr);
+
+        // Augment the tableau.
+        status = augment_tableau(tab, tab->n + 1, tab->m + 1);
+        if (status) {
+            status = INFEASIBLE;
+            break;
+        }
+
+        // Write all zeros in the last column (except last position).
+        size_t cols = tab->n + 1;
+        for (size_t i = 0; i < tab->m; i++)
+            tab->data[i * cols + tab->n] = fraction_create(0, 1);
+
+        // Write last row.
+        for (size_t j = 0; j < tab->n; j++) {
+            Fraction elem = tab->data[row_idx * cols + j];
+            Fraction res = fraction_subtract(elem, fraction_floor(elem));
+            tab->data[tab->m * cols + j] = fraction_chg_sign(res);
+        }
+        // Last entry in the last row is a 1.
+        tab->data[tab->m * cols + tab->n] = fraction_create(1, 1);
+
+        // Augment basis.
+        size_t *aug_basis = realloc(basis, tab->m * sizeof(Fraction));
+        if (aug_basis == NULL) {
+            fprintf(stderr, "Error - Cannot augment basis.\n");
+            status = INFEASIBLE;
+            break;
+        }
+        basis = aug_basis;
+
+        // Add new variable to the basis.
+        basis[tab->m - 1] = tab->n;
+
+        // Restore feasibility using dual simplex.
+        printf("\n### Dual Simplex ###\n");
+        status = dual_simplex(tab, basis);
+        if (status == UNBOUNDED) {
+            printf("No solution - Problem is infeasible.\n");
+            status = INFEASIBLE;
+            break;
+        }
+    }
+    
+    return status;
 }
