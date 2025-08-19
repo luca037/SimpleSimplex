@@ -24,35 +24,63 @@ int main(int argc, char *argv[]) {
     Tableau tab;
     int status = load_tableau(num_fn, den_fn, rows, cols, &tab);
     if (!status) {
-        printf("Status ok.\n");
+        printf("Tableau loaded from file:\n");
         pretty_print_tableau(&tab);
+    } else {
+        fprintf(stderr, "Error - Could not load tableau from file.\n");
+        return 1;
+    }
+
+    // Allocate memory for the basis.
+    size_t *basis = NULL;
+    basis = (size_t*) malloc(tab.m * sizeof(size_t));
+    if (basis == NULL) {
+        fprintf(stderr, "Error - Not enough memory to allocate the basis.\n");
+        goto TERMINATE;
     }
 
     // Check mode and lauch solver.
     if (!strcmp("TPS", mode)) { // Two Phase Simplex.
 
-        // Allocate memory for the basis.
-        size_t *basis = (size_t*) malloc(tab.m * sizeof(size_t));
-        if (basis == NULL) {
-            fprintf(stderr, "Error - Not enough memory to allocate the basis.\n");
-            free_and_null((char**) &basis);
-            return 1;
-        }
-
-        printf("### Starting phase one... ###\n");
+        printf("\n### Starting phase one... ###\n");
         int status = phase_one(&tab, basis);
         if (status == FEASIBLE) {
             printf("\n### Problem is feasible. Starting phase two... ###\n");
             simplex(&tab, basis);
         }
         
-        // Free memory.
-        free_and_null((char**) &basis);
-
     } else if (!strcmp("DS", mode)) { // Dual simplex.
+
+        // Retrieve the basis.
+        int status = search_starting_basis(&tab, basis);
+        if (status) {
+            fprintf(stderr, "Error - No full basis found.\n");
+            goto TERMINATE;
+        }
+
+        printf("Retrieved basis: ");
+        for (size_t i = 0; i < tab.m; i++) {
+            if (i == tab.m - 1) printf("x[%lu].\n\n", basis[i]);
+            else printf("x[%lu], ", basis[i]);
+        }
+
+        printf("\n### Starting dual simplex... ###\n");
+        dual_simplex(&tab, basis);
+        
+    } else if (!strcmp("CP", mode)) {
+
+        printf("\n### Starting cutting plane... ###\n");
+        cutting_plane(&tab, basis);
+
     } else {
         fprintf(stderr, "Error - Mode specified not defined.");
     }
+
+TERMINATE:
+    
+    // Free memory.
+    free_and_null((char**) &tab.data);
+    free_and_null((char**) &basis);
 
     return 0;
 }
