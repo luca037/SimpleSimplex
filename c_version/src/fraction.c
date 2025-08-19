@@ -118,6 +118,20 @@ Fraction fraction_chg_sign(Fraction f) {
     return fraction_multiply(f, fraction_create(-1, 1));
 }
 
+// Floor function.
+Fraction fraction_floor(Fraction f) {
+    Fraction res;
+    res.num = f.num / f.den;
+    res.den = 1;
+
+    // Manage case when 'f' is negative;
+    int r = f.num % f.den;
+    if (f.num < 0 && r != 0)
+        res.num -= 1;
+
+    return res;
+}
+
 // Comparison functions (New implementations)
 // Use cross-multiplication: compare f1.num * f2.den vs f2.num * f1.den
 // Assumes denominators are positive due to fraction_create.
@@ -145,7 +159,6 @@ int fraction_greater(Fraction f1, Fraction f2) {
 int fraction_greater_equal(Fraction f1, Fraction f2) {
     return (f1.num * f2.den) >= (f2.num * f1.den);
 }
-
 
 // Function to print a fraction
 void fraction_print(Fraction f) {
