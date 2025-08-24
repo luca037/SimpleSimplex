@@ -2,6 +2,14 @@
 
 #include <stdlib.h>
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
 int load_tableau(
         const char *num_fn,
         const char *den_fn,
@@ -138,30 +146,77 @@ void pivot_operations(Tableau *tab, size_t h, size_t t, int minipivot, size_t ro
 }
 
 // Print the tableau in a nice way :).
-void pretty_print_tableau(Tableau *tab) {
+void pretty_print_tableau(Tableau *tab, size_t *basis) {
     size_t cols = tab->n + 1;
 
-    for (int i = 0; i <= tab->m; i++) {
-        printf("[ ");
+    const int col_width = 5;
+    const int indent = 5;
 
+    // Print the variables names as first row.
+    printf("%*s", 10 + indent, "");
+    for (int j = 0; j < tab->n; j++) 
+        printf(ANSI_COLOR_GREEN "%*sx[%i]" ANSI_COLOR_RESET, col_width, "", j + 1);
+    printf("\n");
+
+    // Print first row of the table.
+    const int table_len = (tab->n * 9) + 7;
+    printf("%*s┌", indent + 3, "");
+    for (int j = 0; j < table_len; j++) {
+        if (j == 8) printf("┬");
+        else printf("─");
+    }
+    printf("┐\n");
+
+    // Now print the tableau.
+    for (int i = 0; i <= tab->m; i++) {
+
+        // Draw an horizontal line after row_0 of tableau.
+        if (i == 1) {
+            printf("%*s├", indent + 3, "");
+            for (int j = 0; j <table_len; j++) {
+                if (j == 8) printf("┼");
+                else printf("─");
+            }
+            printf("┤\n");
+        }
+
+        // Print current basis.
+        char name[10];
+        if (!i)
+            snprintf(name, sizeof(name), "-z");
+        else if (basis)
+            snprintf(name, sizeof(name), "x[%lu]", basis[i-1]);
+        else
+            snprintf(name, sizeof(name), "x[]");
+
+        printf(ANSI_COLOR_GREEN "%6s " ANSI_COLOR_RESET, name);
+
+        // Print row_i elements.
         for (int j = 0; j <= tab->n; j++) {
-            Fraction *elem = &tab->data[i * cols + j];
+            Fraction elem = tab->data[i * cols + j];
 
             // Buffer that holds the string representation of 'elem'.
-            char cell_str[50]; // 50 is a safe size for int/int strings
+            char cell_str[50]; // 50 is a safe size for int/int strings.
 
-            if (elem->den == 1) {
-                snprintf(cell_str, sizeof(cell_str), "%d", elem->num);
-            } else {
-                snprintf(cell_str, sizeof(cell_str), "%d/%d", elem->num, elem->den);
-            }
+            if (elem.den == 1)
+                snprintf(cell_str, sizeof(cell_str), "%d", elem.num);
+            else
+                snprintf(cell_str, sizeof(cell_str), "%d/%d", elem.num, elem.den);
 
             // Print the formatted string with a fixed width, right-aligned.
-            printf("%6s ", cell_str);
-
+            if (!j || j == 1) printf(" │%6s ", cell_str);
+            else printf("  %6s ", cell_str);
         }
-        printf("]\n");
+        printf("│\n");
     }
+
+    // Print last row of the table.
+    printf("%*s└", indent + 3, "");
+    for (int j = 0; j < table_len; j++) {
+        if (j == 8) printf("┴");
+        else printf("─");
+    }
+    printf("┘\n");
 }
 
 // Return 1 if the problem is unbounded, 0 otherwise.
@@ -225,7 +280,7 @@ int simplex(Tableau *tab, size_t *basis) {
     // Start the simplex algorithm.
     while (!optimal && !unbounded) {
         printf("Current tableau - itr: %d\n", itr);
-        pretty_print_tableau(tab);
+        pretty_print_tableau(tab, basis);
  
         // Optimality check.
         optimal = optimality_check(tab, &h);
@@ -436,7 +491,7 @@ int dual_simplex(Tableau *tab, size_t *basis) {
     // Start the simplex algorithm.
     while (!optimal && !unbounded) {
         printf("Current tableau - itr: %d\n", itr);
-        pretty_print_tableau(tab);
+        pretty_print_tableau(tab, basis);
  
         // Optimality check.
         optimal = dual_optimality_check(tab, &t, basis);

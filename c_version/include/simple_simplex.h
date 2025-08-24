@@ -28,7 +28,7 @@ int search_starting_basis(Tableau *tab, size_t *basis);
 void pivot_operations(Tableau *tab, size_t h, size_t t, int minipivot, size_t row);
 
 // Print the tableau in a nice way :).
-void pretty_print_tableau(Tableau *tab);
+void pretty_print_tableau(Tableau *tab, size_t *basis);
 
 // FIXME: implement the bland's rule.
 // Return 1 if the problem is unbounded, 0 otherwise.

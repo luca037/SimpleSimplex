@@ -5,7 +5,6 @@
 #include "../include/utils.h"
 #include "../include/simple_simplex.h"
 
-
 // Function that tests the two phases simplex.
 void two_phase_tester(void);
 
@@ -25,7 +24,7 @@ int main(int argc, char *argv[]) {
     int status = load_tableau(num_fn, den_fn, rows, cols, &tab);
     if (!status) {
         printf("Tableau loaded from file:\n");
-        pretty_print_tableau(&tab);
+        pretty_print_tableau(&tab, NULL);
     } else {
         fprintf(stderr, "Error - Could not load tableau from file.\n");
         return 1;
