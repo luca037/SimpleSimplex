@@ -286,13 +286,13 @@ int simplex(Tableau *tab, size_t *basis) {
         optimal = optimality_check(tab, &h);
 
         if (!optimal) {
-            printf("x[%lu] enters the basis.\n", h);
+            printf("%*sx[%lu] enters the basis.\n", 8, "", h);
 
             unbounded = unbounded_check(tab, h, &t, basis);
             if (!unbounded) {
-                printf("Current pivot element = ");
+                printf("%*sCurrent pivot element = ", 8, "");
                 fraction_print(tab->data[t * cols + h]);
-                printf("\nx[%lu] leaves the basis.\n", basis[t - 1]);
+                printf("\n%*sx[%lu] leaves the basis.\n", 8, "", basis[t - 1]);
                 pivot_operations(tab, h, t, 0, 0);
 
                 basis[t - 1] = h; // Update basis;
@@ -304,9 +304,9 @@ int simplex(Tableau *tab, size_t *basis) {
 
     // Check the result.
     if (optimal) {
-        printf("Found an optimal solution.\n");
+        printf("%*sFound an optimal solution.\n", 8, "");
         Fraction cost = fraction_chg_sign(tab->data[0]);
-        printf("Cost = "); fraction_print(cost); printf("\n");
+        printf("%*sCost = ", 8, ""); fraction_print(cost); printf("\n");
         return OPTIMAL;
     }
 
