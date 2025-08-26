@@ -1,15 +1,154 @@
 # SimpleSimplex
 
+## Build project
+```bash
+mkdir build && cd build
+cmake .. && make
+cd ..
+```
 
+## How to use it
+Create a file named `problem_data.py` and write the problem's data following the example below.
+```python
+# Specify the data related to the problem.
+# For example, consider the problem:
+#
+#    min -4x1 - 5x2 
+#
+#         2x1 + 2x2 + x3           = 8
+#          x1 + 3x2      + x4      = 7
+#         2x1 +  x2           + x5 = 5
+#
+#          x1,   x2, x3,   x4,  x5 >= 0 integer
 
-https://github.com/user-attachments/assets/a9591e0a-38bb-4a6c-80d5-a96a9467e2fe
+# A matrix.
+A = [
+        [2, 2, 1, 0, 0],
+        [1, 3, 0, 1, 0],
+        [2, 1, 0, 0, 1]
+]
 
+# b vector.
+b = [8, 7, 5]
 
+# c vector.
+c = [-4, -5, 0, 0, 0]
 
-Some algorithms introduced in the course of Operations Research 1:
-- Two phases Simplex
-- Dual Simplex
-- Cutting Plane
-- Branch & Bound
+# Specify the mode.
+# Possible values:
+#    - TPS => Two Phase Simplex
+#    - DS  => Dual Simplex
+#    - CP  => Cutting Plane
+mode = "CP"
+```
 
-All the pseudocodes are based on the book "Introduction to Mathematical Optimization".
+Then just run the solver with:
+```python
+python run_solver.py
+```
+
+## Output of the example
+```
+### Starting cutting plane... ###
+
+### Starting phase two... ###
+Current tableau - itr: 0
+                    x[1]     x[2]     x[3]     x[4]     x[5]
+        ┌────────┬───────────────────────────────────────────┐
+    -z  │     0  │    -4       -5        0        0        0 │
+        ├────────┼───────────────────────────────────────────┤
+  x[3]  │     8  │     2        2        1        0        0 │
+  x[4]  │     7  │     1        3        0        1        0 │
+  x[5]  │     5  │     2        1        0        0        1 │
+        └────────┴───────────────────────────────────────────┘
+        x[1] enters the basis.
+        Current pivot element = 2/1
+        x[5] leaves the basis.
+
+Current tableau - itr: 1
+                    x[1]     x[2]     x[3]     x[4]     x[5]
+        ┌────────┬───────────────────────────────────────────┐
+    -z  │    10  │     0       -3        0        0        2 │
+        ├────────┼───────────────────────────────────────────┤
+  x[3]  │     3  │     0        1        1        0       -1 │
+  x[4]  │   9/2  │     0      5/2        0        1     -1/2 │
+  x[1]  │   5/2  │     1      1/2        0        0      1/2 │
+        └────────┴───────────────────────────────────────────┘
+        x[2] enters the basis.
+        Current pivot element = 5/2
+        x[4] leaves the basis.
+
+Current tableau - itr: 2
+                    x[1]     x[2]     x[3]     x[4]     x[5]
+        ┌────────┬───────────────────────────────────────────┐
+    -z  │  77/5  │     0        0        0      6/5      7/5 │
+        ├────────┼───────────────────────────────────────────┤
+  x[3]  │   6/5  │     0        0        1     -2/5     -4/5 │
+  x[2]  │   9/5  │     0        1        0      2/5     -1/5 │
+  x[1]  │   8/5  │     1        0        0     -1/5      3/5 │
+        └────────┴───────────────────────────────────────────┘
+        Found an optimal solution.
+        Cost = -77/5
+
+### Cutting Plane - itr: 0 ###
+
+### Dual Simplex ###
+Current tableau - itr: 0
+                    x[1]     x[2]     x[3]     x[4]     x[5]     x[6]
+        ┌────────┬────────────────────────────────────────────────────┐
+    -z  │  77/5  │     0        0        0      6/5      7/5        0 │
+        ├────────┼────────────────────────────────────────────────────┤
+  x[3]  │   6/5  │     0        0        1     -2/5     -4/5        0 │
+  x[2]  │   9/5  │     0        1        0      2/5     -1/5        0 │
+  x[1]  │   8/5  │     1        0        0     -1/5      3/5        0 │
+  x[6]  │  -1/5  │     0        0        0     -3/5     -1/5        1 │
+        └────────┴────────────────────────────────────────────────────┘
+        x[6] leaves the basis.
+        Current pivot element = -3/5
+        x[4] enters the basis.
+
+Current tableau - itr: 1
+                    x[1]     x[2]     x[3]     x[4]     x[5]     x[6]
+        ┌────────┬────────────────────────────────────────────────────┐
+    -z  │    15  │     0        0        0        0        1        2 │
+        ├────────┼────────────────────────────────────────────────────┤
+  x[3]  │   4/3  │     0        0        1        0     -2/3     -2/3 │
+  x[2]  │   5/3  │     0        1        0        0     -1/3      2/3 │
+  x[1]  │   5/3  │     1        0        0        0      2/3     -1/3 │
+  x[4]  │   1/3  │     0        0        0        1      1/3     -5/3 │
+        └────────┴────────────────────────────────────────────────────┘
+        Found an optimal solution.
+        Cost = -15/1
+
+### Cutting Plane - itr: 1 ###
+
+### Dual Simplex ###
+Current tableau - itr: 0
+                    x[1]     x[2]     x[3]     x[4]     x[5]     x[6]     x[7]
+        ┌────────┬─────────────────────────────────────────────────────────────┐
+    -z  │    15  │     0        0        0        0        1        2        0 │
+        ├────────┼─────────────────────────────────────────────────────────────┤
+  x[3]  │   4/3  │     0        0        1        0     -2/3     -2/3        0 │
+  x[2]  │   5/3  │     0        1        0        0     -1/3      2/3        0 │
+  x[1]  │   5/3  │     1        0        0        0      2/3     -1/3        0 │
+  x[4]  │   1/3  │     0        0        0        1      1/3     -5/3        0 │
+  x[7]  │  -1/3  │     0        0        0        0     -1/3     -1/3        1 │
+        └────────┴─────────────────────────────────────────────────────────────┘
+        x[7] leaves the basis.
+        Current pivot element = -1/3
+        x[5] enters the basis.
+
+Current tableau - itr: 1
+                    x[1]     x[2]     x[3]     x[4]     x[5]     x[6]     x[7]
+        ┌────────┬─────────────────────────────────────────────────────────────┐
+    -z  │    14  │     0        0        0        0        0        1        3 │
+        ├────────┼─────────────────────────────────────────────────────────────┤
+  x[3]  │     2  │     0        0        1        0        0        0       -2 │
+  x[2]  │     2  │     0        1        0        0        0        1       -1 │
+  x[1]  │     1  │     1        0        0        0        0       -1        2 │
+  x[4]  │     0  │     0        0        0        1        0       -2        1 │
+  x[5]  │     1  │     0        0        0        0        1        1       -3 │
+        └────────┴─────────────────────────────────────────────────────────────┘
+        Found an optimal solution.
+        Cost = -14/1
+```
