@@ -36,6 +36,7 @@ c = [-4, -5, 0, 0, 0]
 
 # Specify the mode.
 # Possible values:
+#    - S   => (Primal) Simplex
 #    - TPS => Two Phase Simplex
 #    - DS  => Dual Simplex
 #    - CP  => Cutting Plane
