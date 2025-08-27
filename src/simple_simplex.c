@@ -1,14 +1,8 @@
 #include "../include/simple_simplex.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
 
 int load_tableau(
         const char *num_fn,
@@ -110,7 +104,7 @@ int search_starting_basis(Tableau *tab, size_t *basis) {
     }
 
     // If a full basis was not found, report the error.
-    if (idx != tab->m - 1) return 1;
+    if (idx != tab->m) return 1;
 
     return 0;
 }
@@ -497,14 +491,14 @@ int dual_simplex(Tableau *tab, size_t *basis) {
         optimal = dual_optimality_check(tab, &t, basis);
 
         if (!optimal) {
-            printf("x[%lu] leaves the basis.\n", basis[t - 1]);
+            printf("%*sx[%lu] leaves the basis.\n", 8, "", basis[t - 1]);
 
             unbounded = dual_unbounded_check(tab, t, &h);
 
             if (!unbounded) {
-                printf("Current pivot element = ");
+                printf("%*sCurrent pivot element = ", 8, "");
                 fraction_print(tab->data[t * cols + h]);
-                printf("\nx[%lu] enters the basis.\n", h);
+                printf("\n%*sx[%lu] enters the basis.\n", 8, "", h);
                 pivot_operations(tab, h, t, 0, 0);
 
                 basis[t - 1] = h; // Update basis;
@@ -516,9 +510,9 @@ int dual_simplex(Tableau *tab, size_t *basis) {
 
     // Check the result.
     if (optimal) {
-        printf("Found an optimal solution.\n");
+        printf("%*sFound an optimal solution.\n", 8, "");
         Fraction cost = fraction_chg_sign(tab->data[0]);
-        printf("Cost = "); fraction_print(cost); printf("\n");
+        printf("%*sCost = ", 8, ""); fraction_print(cost); printf("\n");
         return OPTIMAL;
     }
 
@@ -582,41 +576,26 @@ int augment_tableau(Tableau *tab, size_t new_n, size_t new_m) {
 }
 
 int cutting_plane(Tableau *tab, size_t *basis) {
+    // Search basis.
+    int status = search_starting_basis(tab, basis);
 
-    // Phase 1.
-    printf("### Starting phase one... ###\n");
-    int status = phase_one(tab, basis);
-    if (status == INFEASIBLE) {
-        return status;
+    if (status) {
+        printf("No starting basis was found...\n");
+
+        // Phase 1.
+        printf("### Starting phase one... ###\n");
+        status = phase_one(tab, basis);
+        if (status == INFEASIBLE) {
+            return status;
+        }
     }
 
     // Simplex (phase 2).
-    printf("\n### Problem is feasible. Starting phase two... ###\n");
+    printf("\n### Starting phase two... ###\n");
     status = simplex(tab, basis);
     if (status == UNBOUNDED) {
         return status;
     }
-
-//    // First create a copy of the tableau.
-//    // This new tableau will be augmented (not the original one).
-//    Tableau aug_tab; // Augmented tableau.
-//    aug_tab.n = tab->n;
-//    aug_tab.m = tab->m;
-//
-    //// Allocate space.
-    //size_t len = (aug_tab.m + 1) * (aug_tab.n + 1);
-    //aug_tab.data = malloc(len * sizeof(Fraction));
-    //if (aug_tab.data == NULL) {
-    //    fprintf(stderr, "Error - Not enough space for augmented tableau.\n");
-    //    goto TERMINATE;
-    //}
-
-    //// Copy data from original tableau.
-    //for (size_t i = 0; i <= tab->m; i++) {
-    //    for (size_t j = 0; j <= tab->n; j++) {
-    //        aug_tab.data[i * cols + j] = tab->data[i * cols + j];
-    //    }
-    //}
 
     // Cutting plane algorithm.
     size_t row_idx = 0; // Index of the first non integer variable.

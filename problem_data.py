@@ -1,31 +1,31 @@
 # Specify the data related to the problem.
 # For example, consider the problem:
 #
-#    min  x1 + x2 + 2x3 + 4x4
-#             2x2       - 3x4  = 1
-#         x1            -  x4  = 0
-#        -x1      +  x3        = 1
+#    min -4x1 - 5x2 
+#
+#         2x1 + 2x2 + x3           = 8
+#          x1 + 3x2      + x4      = 7
+#         2x1 +  x2           + x5 = 5
+#
+#          x1,   x2, x3,   x4,  x5 >= 0 integer
 
 # A matrix.
 A = [
-        [0, 2, 0, -3],
-        [1, 0, 0, -1],
-        [-1, 0, 1, 0]
+        [2, 2, 1, 0, 0],
+        [1, 3, 0, 1, 0],
+        [2, 1, 0, 0, 1]
 ]
 
 # b vector.
-b = [1, 0, 1]
+b = [8, 7, 5]
 
 # c vector.
-c = [1, 1, 2, 4]
+c = [-4, -5, 0, 0, 0]
 
 # Specify the mode.
 # Possible values:
+#    - S   => (Primal) Simplex
 #    - TPS => Two Phase Simplex
 #    - DS  => Dual Simplex
-mode = "TPS"
-
-# NOTE: if you want to use the Dual Simplex (DS), then you must provide 
-# the starting basis. In the basis vector you need to specify the index 
-# of the variables.
-basis = [1, 2]
+#    - CP  => Cutting Plane
+mode = "CP"

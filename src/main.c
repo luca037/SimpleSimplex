@@ -39,7 +39,25 @@ int main(int argc, char *argv[]) {
     }
 
     // Check mode and lauch solver.
-    if (!strcmp("TPS", mode)) { // Two Phase Simplex.
+    if (!strcmp("S", mode)) {
+
+        // Retrieve the basis.
+        int status = search_starting_basis(&tab, basis);
+        if (status) {
+            fprintf(stderr, "Error - No full basis found.\n");
+            goto TERMINATE;
+        }
+
+        printf("Retrieved basis: ");
+        for (size_t i = 0; i < tab.m; i++) {
+            if (i == tab.m - 1) printf("x[%lu].\n\n", basis[i]);
+            else printf("x[%lu], ", basis[i]);
+        }
+
+        printf("\n### Starting simplex... ###\n");
+        simplex(&tab, basis);
+
+    } else if (!strcmp("TPS", mode)) { // Two Phase Simplex.
 
         printf("\n### Starting phase one... ###\n");
         int status = phase_one(&tab, basis);

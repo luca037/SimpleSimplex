@@ -55,6 +55,15 @@ def construct_tableau(A, b, c):
 
 if __name__ == "__main__":
 
+    # Create data dir, if necessary.
+    data_dir = os.path.dirname(NUM_FN)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+    # Create the binary files if necessary.
+    if not os.path.exists(NUM_FN):
+        with open(NUM_FN, 'w'): pass
+
     # Create the tableau.
     Tableau = construct_tableau(problem_data.A, problem_data.b, problem_data.c)
 
